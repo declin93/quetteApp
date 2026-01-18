@@ -284,7 +284,7 @@ function App() {
           <div>
             <p className="brand-title">QUETTE</p>
             <p className="brand-subtitle">
-              Voti per film, serie tv, videogiochi e libri, tutto in fette di pizza. Because pizza it's the fricking best.
+              Voti per film, serie tv, videogiochi e libri, tutto in fette di pizza. Because pizza is the fricking best.
             </p>
           </div>
         </div>
