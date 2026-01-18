@@ -58,6 +58,8 @@ function App() {
   const [customIngredient, setCustomIngredient] = useState("");
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState(null);
+  const [detailId, setDetailId] = useState(null);
+  const [editReturnView, setEditReturnView] = useState("all");
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -156,11 +158,12 @@ function App() {
     }
 
     if (editingId) {
+      const targetId = editingId;
       setRatings((prev) => {
-        const target = prev.find((item) => item.id === editingId);
+        const target = prev.find((item) => item.id === targetId);
         if (!target) return prev;
         return prev.map((item) =>
-          item.id === editingId
+          item.id === targetId
             ? {
                 ...item,
                 title,
@@ -174,7 +177,13 @@ function App() {
       });
       setEditingId(null);
       resetDraft();
-      setView("all");
+      if (editReturnView === "detail") {
+        setDetailId(targetId);
+        setView("detail");
+      } else {
+        setDetailId(null);
+        setView("all");
+      }
       return;
     }
 
@@ -198,11 +207,15 @@ function App() {
     if (nextView !== "new") {
       setEditingId(null);
     }
+    if (nextView !== "detail") {
+      setDetailId(null);
+    }
   };
 
   const handleStartNew = () => {
     setSearchTerm("");
     setEditingId(null);
+    setEditReturnView("all");
     resetDraft();
     setView("new");
   };
@@ -215,7 +228,7 @@ function App() {
     }
   };
 
-  const handleEditRating = (rating) => {
+  const handleEditRating = (rating, returnView = "all") => {
     setDraft({
       title: rating.title,
       type: rating.type,
@@ -226,6 +239,7 @@ function App() {
     setCustomIngredient("");
     setError("");
     setEditingId(rating.id);
+    setEditReturnView(returnView);
     setView("new");
   };
 
@@ -240,6 +254,26 @@ function App() {
       resetDraft();
       setView("all");
     }
+    if (detailId === rating.id) {
+      setDetailId(null);
+      setView("all");
+    }
+  };
+
+  const handleOpenDetail = (ratingId) => {
+    setDetailId(ratingId);
+    setView("detail");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    resetDraft();
+    if (editReturnView === "detail") {
+      setView("detail");
+    } else {
+      setDetailId(null);
+      setView("all");
+    }
   };
 
   return (
@@ -250,7 +284,7 @@ function App() {
           <div>
             <p className="brand-title">QUETTE</p>
             <p className="brand-subtitle">
-              Voti per film, serie tv, videogiochi e libri, tutto in fette di pizza. <br /> Because pizza it's the fricking best.
+              Voti per film, serie tv, videogiochi e libri, tutto in fette di pizza. Because pizza it's the fricking best.
             </p>
           </div>
         </div>
@@ -300,6 +334,7 @@ function App() {
             ratings={recentRatings}
             totalCount={ratings.length}
             onNew={handleStartNew}
+            onOpenDetail={handleOpenDetail}
           />
         )}
 
@@ -315,11 +350,7 @@ function App() {
             onRemoveIngredient={handleRemoveIngredient}
             onAddCustomIngredient={handleAddCustomIngredient}
             onSubmit={handleSubmit}
-            onCancel={() => {
-              setEditingId(null);
-              resetDraft();
-              setView("all");
-            }}
+            onCancel={handleCancelEdit}
           />
         )}
 
@@ -332,12 +363,21 @@ function App() {
             onDelete={handleDeleteRating}
           />
         )}
+
+        {view === "detail" && (
+          <RatingDetail
+            rating={ratings.find((item) => item.id === detailId) || null}
+            onBack={() => handleViewChange("all")}
+            onEdit={(rating) => handleEditRating(rating, "detail")}
+            onDelete={handleDeleteRating}
+          />
+        )}
       </main>
     </div>
   );
 }
 
-function Home({ ratings, totalCount, onNew }) {
+function Home({ ratings, totalCount, onNew, onOpenDetail }) {
   return (
     <section className="panel">
       <header className="panel-header">
@@ -370,6 +410,7 @@ function Home({ ratings, totalCount, onNew }) {
               rating={rating}
               compact
               delay={index}
+              onOpen={() => onOpenDetail(rating.id)}
             />
           ))}
         </div>
@@ -566,17 +607,56 @@ function AllRatings({ ratings, total, searchTerm, onEdit, onDelete }) {
   );
 }
 
+function RatingDetail({ rating, onBack, onEdit, onDelete }) {
+  return (
+    <section className="panel">
+      <header className="panel-header">
+        <div>
+          <h2>Dettaglio voto</h2>
+          <p className="muted">Controlla ingredienti e fette del voto.</p>
+        </div>
+        <button type="button" className="nav-button" onClick={onBack}>
+          Torna ai voti
+        </button>
+      </header>
+      {rating ? (
+        <RatingCard rating={rating} onEdit={onEdit} onDelete={onDelete} />
+      ) : (
+        <div className="empty-state">
+          <p>Questo voto non esiste piu'.</p>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function RatingCard({
   rating,
   compact = false,
   delay = 0,
   onEdit,
   onDelete,
+  onOpen,
 }) {
+  const handleKeyDown = (event) => {
+    if (!onOpen) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onOpen();
+    }
+  };
+
   return (
     <article
-      className={`card ${compact ? "compact" : ""}`}
+      className={`card ${compact ? "compact" : ""} ${
+        onOpen ? "clickable" : ""
+      }`}
       style={{ animationDelay: `${delay * 0.08}s` }}
+      onClick={onOpen}
+      onKeyDown={handleKeyDown}
+      tabIndex={onOpen ? 0 : undefined}
+      role={onOpen ? "button" : undefined}
+      aria-label={onOpen ? `Apri dettaglio ${rating.title}` : undefined}
     >
       <div className="card-header">
         <div>

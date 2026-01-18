@@ -212,6 +212,15 @@ textarea {
   animation: cardIn 0.5s ease-out both;
 }
 
+.card.clickable {
+  cursor: pointer;
+}
+
+.card.clickable:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--shadow);
+}
+
 .card.compact .chips {
   max-height: 62px;
   overflow: hidden;
