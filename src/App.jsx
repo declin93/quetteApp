@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "quette.pizzaVotes";
-const PIZZA_SLICES = 8;
+const PIZZA_SLICES = 10;
 const STANDARD_INGREDIENTS = [
   "pomodoro",
   "mozzarella",
@@ -248,9 +248,9 @@ function App() {
         <div className="brand">
           <div className="logo-pixel">Q</div>
           <div>
-            <p className="brand-title">Quette Pizza Votes</p>
+            <p className="brand-title">QUETTE</p>
             <p className="brand-subtitle">
-              Voti per film, serie tv, videogiochi e libri in fette di pizza
+              Voti per film, serie tv, videogiochi e libri, tutto in fette di pizza. <br /> Because pizza it's the fricking best.
             </p>
           </div>
         </div>
