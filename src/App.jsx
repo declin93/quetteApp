@@ -52,7 +52,18 @@ const formatDate = (timestamp) =>
 
 function App() {
   const [view, setView] = useState("home");
-  const [ratings, setRatings] = useState([]);
+  const [ratings, setRatings] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (err) {
+      console.warn("Invalid local data", err);
+    }
+    return [];
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [draft, setDraft] = useState(emptyDraft);
   const [customIngredient, setCustomIngredient] = useState("");
@@ -61,18 +72,7 @@ function App() {
   const [detailId, setDetailId] = useState(null);
   const [editReturnView, setEditReturnView] = useState("all");
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        setRatings(parsed);
-      }
-    } catch (err) {
-      console.warn("Invalid local data", err);
-    }
-  }, []);
+
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ratings));
