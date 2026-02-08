@@ -195,6 +195,24 @@ textarea {
   font-size: 10px;
 }
 
+.filter-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sort-select {
+  border: 3px solid var(--ink);
+  padding: 8px 10px;
+  background: var(--white);
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

@@ -65,6 +65,8 @@ function App() {
     return [];
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [sortBy, setSortBy] = useState("newest");
   const [draft, setDraft] = useState(emptyDraft);
   const [customIngredient, setCustomIngredient] = useState("");
   const [error, setError] = useState("");
@@ -100,12 +102,41 @@ function App() {
   );
 
   const filteredRatings = useMemo(() => {
+    let result = [...ratings];
+
+    if (filterType) {
+      result = result.filter((rating) => rating.type === filterType);
+    }
+
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return sortedRatings;
-    return sortedRatings.filter((rating) =>
-      rating.title.toLowerCase().includes(term)
-    );
-  }, [sortedRatings, searchTerm]);
+    if (term) {
+      result = result.filter((rating) =>
+        rating.title.toLowerCase().includes(term)
+      );
+    }
+
+    switch (sortBy) {
+      case "oldest":
+        result.sort((a, b) => a.createdAt - b.createdAt);
+        break;
+      case "highest":
+        result.sort((a, b) => b.slices - a.slices);
+        break;
+      case "lowest":
+        result.sort((a, b) => a.slices - b.slices);
+        break;
+      case "az":
+        result.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+      case "za":
+        result.sort((a, b) => b.title.localeCompare(a.title));
+        break;
+      default:
+        result.sort((a, b) => b.createdAt - a.createdAt);
+    }
+
+    return result;
+  }, [ratings, filterType, searchTerm, sortBy]);
 
   const handleToggleIngredient = (ingredient) => {
     setDraft((prev) => {
@@ -371,6 +402,10 @@ function App() {
             ratings={filteredRatings}
             total={ratings.length}
             searchTerm={searchTerm}
+            filterType={filterType}
+            onFilterChange={setFilterType}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
             onEdit={handleEditRating}
             onDelete={handleDeleteRating}
           />
@@ -575,23 +610,57 @@ function NewRating({
   );
 }
 
-function AllRatings({ ratings, total, searchTerm, onEdit, onDelete }) {
+function AllRatings({ ratings, total, searchTerm, filterType, onFilterChange, sortBy, onSortChange, onEdit, onDelete }) {
+  const hasFilters = searchTerm || filterType;
   const emptyMessage =
     total === 0
       ? "Nessun voto salvato."
-      : "Nessun voto corrisponde alla ricerca.";
+      : "Nessun voto corrisponde ai filtri.";
   return (
     <section className="panel">
       <header className="panel-header">
         <div>
           <h2>Tutti i voti</h2>
           <p className="muted">
-            {searchTerm
+            {hasFilters
               ? `${ratings.length} risultati su ${total}.`
               : `${total} voti salvati.`}
           </p>
         </div>
       </header>
+      <div className="filter-toolbar">
+        <div className="pill-grid">
+          <button
+            type="button"
+            className={`pill ${filterType === "" ? "active" : ""}`}
+            onClick={() => onFilterChange("")}
+          >
+            Tutti
+          </button>
+          {MEDIA_TYPES.map((type) => (
+            <button
+              key={type.value}
+              type="button"
+              className={`pill ${filterType === type.value ? "active" : ""}`}
+              onClick={() => onFilterChange(type.value)}
+            >
+              {type.label}
+            </button>
+          ))}
+        </div>
+        <select
+          className="sort-select"
+          value={sortBy}
+          onChange={(e) => onSortChange(e.target.value)}
+        >
+          <option value="newest">Più recenti</option>
+          <option value="oldest">Meno recenti</option>
+          <option value="highest">Voto più alto</option>
+          <option value="lowest">Voto più basso</option>
+          <option value="az">A → Z</option>
+          <option value="za">Z → A</option>
+        </select>
+      </div>
       {ratings.length === 0 ? (
         <div className="empty-state">
           <p>{emptyMessage}</p>
