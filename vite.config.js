@@ -12,9 +12,9 @@ export default defineConfig({
       manifest: {
         name: "Quette App",
         short_name: "Quette App",
-        description: "",
-        theme_color: "#0f1117",
-        background_color: "#0f1117",
+        description: "Voti per film, serie tv, videogiochi e libri, tutto in fette di pizza.",
+        theme_color: "#f3b06f",
+        background_color: "#f3b06f",
         display: "standalone",
         start_url: ".",
         icons: [

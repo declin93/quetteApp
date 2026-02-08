@@ -78,6 +78,18 @@ function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ratings));
   }, [ratings]);
 
+  useEffect(() => {
+    const handleStorage = (event) => {
+      if (event.key !== STORAGE_KEY) return;
+      try {
+        const parsed = JSON.parse(event.newValue);
+        if (Array.isArray(parsed)) setRatings(parsed);
+      } catch { /* ignore malformed data */ }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   const sortedRatings = useMemo(() => {
     return [...ratings].sort((a, b) => b.createdAt - a.createdAt);
   }, [ratings]);
@@ -389,15 +401,9 @@ function Home({ ratings, totalCount, onNew, onOpenDetail }) {
               : `${totalCount} voti totali in dispensa.`}
           </p>
         </div>
-        {/* <button type="button" className="nav-button cta" onClick={onNew}>
-          Aggiungi al volo
-        </button> */}
       </header>
       {ratings.length === 0 ? (
         <div className="empty-state">
-          {/* <p>
-            Nessun voto salvato. Premi "Aggiungi al volo" per creare il primo.
-          </p> */}
           <p>
             Nessun voto salvato. Premi "Nuovo Voto" per inserire il primo.
           </p>
@@ -679,7 +685,7 @@ function RatingCard({
             <button
               type="button"
               className="nav-button"
-              onClick={() => onEdit(rating)}
+              onClick={(event) => { event.stopPropagation(); onEdit(rating); }}
             >
               Modifica
             </button>
@@ -688,7 +694,7 @@ function RatingCard({
             <button
               type="button"
               className="nav-button danger"
-              onClick={() => onDelete(rating)}
+              onClick={(event) => { event.stopPropagation(); onDelete(rating); }}
             >
               Elimina
             </button>
