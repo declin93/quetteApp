@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vite build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npm run dev:*)",
+      "Bash(git -C \"C:\\\\Users\\\\declin\\\\Documents\\\\QuetteApp\" status)",
+      "Bash(git -C \"C:\\\\Users\\\\declin\\\\Documents\\\\QuetteApp\" diff)",
+      "Bash(git -C \"C:\\\\Users\\\\declin\\\\Documents\\\\QuetteApp\" log --oneline -5)",
+      "Bash(git -C \"C:\\\\Users\\\\declin\\\\Documents\\\\QuetteApp\" add src/App.jsx src/styles.css)",
+      "Bash(git -C \"C:\\\\Users\\\\declin\\\\Documents\\\\QuetteApp\" commit -m \"$\\(cat <<''EOF''\nadd category filters and sorting to AllRatings view\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C \"C:\\\\Users\\\\declin\\\\Documents\\\\QuetteApp\" push)",
+      "Bash(git -C \"C:\\\\Users\\\\declin\\\\Documents\\\\QuetteApp\" log --oneline -20)",
+      "Bash(timeout:*)",
+      "Bash(npm run build:*)"
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "quette.pizzaVotes";
+const COLLECTIONS_KEY = "quette.collections";
 const PIZZA_SLICES = 10;
 const STANDARD_INGREDIENTS = [
   "pomodoro",
@@ -50,6 +51,24 @@ const formatDate = (timestamp) =>
     year: "numeric",
   });
 
+const wrapText = (ctx, text, maxWidth) => {
+  const words = text.split(" ");
+  const lines = [];
+  let currentLine = "";
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    const metrics = ctx.measureText(testLine);
+    if (metrics.width > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+};
+
 function App() {
   const [view, setView] = useState("home");
   const [ratings, setRatings] = useState(() => {
@@ -73,6 +92,24 @@ function App() {
   const [editingId, setEditingId] = useState(null);
   const [detailId, setDetailId] = useState(null);
   const [editReturnView, setEditReturnView] = useState("all");
+  const [collections, setCollections] = useState(() => {
+    try {
+      const stored = localStorage.getItem(COLLECTIONS_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (err) {
+      console.warn("Invalid collections data", err);
+    }
+    return [];
+  });
+  const [collectionDetailId, setCollectionDetailId] = useState(null);
+  const [newCollectionName, setNewCollectionName] = useState("");
+  const [renamingCollectionId, setRenamingCollectionId] = useState(null);
+  const [renamingCollectionName, setRenamingCollectionName] = useState("");
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState([]);
+  const [importStatus, setImportStatus] = useState("");
 
 
 
@@ -86,6 +123,22 @@ function App() {
       try {
         const parsed = JSON.parse(event.newValue);
         if (Array.isArray(parsed)) setRatings(parsed);
+      } catch { /* ignore malformed data */ }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(COLLECTIONS_KEY, JSON.stringify(collections));
+  }, [collections]);
+
+  useEffect(() => {
+    const handleStorage = (event) => {
+      if (event.key !== COLLECTIONS_KEY) return;
+      try {
+        const parsed = JSON.parse(event.newValue);
+        if (Array.isArray(parsed)) setCollections(parsed);
       } catch { /* ignore malformed data */ }
     };
     window.addEventListener("storage", handleStorage);
@@ -179,6 +232,7 @@ function App() {
     setDraft(emptyDraft);
     setCustomIngredient("");
     setError("");
+    setSelectedCollectionIds([]);
   };
 
   const handleSubmit = (event) => {
@@ -241,6 +295,17 @@ function App() {
     };
 
     setRatings((prev) => [newEntry, ...prev]);
+
+    if (selectedCollectionIds.length > 0) {
+      setCollections((prev) =>
+        prev.map((col) =>
+          selectedCollectionIds.includes(col.id)
+            ? { ...col, ratingIds: [...col.ratingIds, newEntry.id] }
+            : col
+        )
+      );
+    }
+
     resetDraft();
     setView("home");
   };
@@ -253,12 +318,16 @@ function App() {
     if (nextView !== "detail") {
       setDetailId(null);
     }
+    if (nextView !== "collection-detail") {
+      setCollectionDetailId(null);
+    }
   };
 
   const handleStartNew = () => {
     setSearchTerm("");
     setEditingId(null);
     setEditReturnView("all");
+    setSelectedCollectionIds([]);
     resetDraft();
     setView("new");
   };
@@ -292,6 +361,12 @@ function App() {
     );
     if (!confirmed) return;
     setRatings((prev) => prev.filter((item) => item.id !== rating.id));
+    setCollections((prev) =>
+      prev.map((col) => ({
+        ...col,
+        ratingIds: col.ratingIds.filter((id) => id !== rating.id),
+      }))
+    );
     if (editingId === rating.id) {
       setEditingId(null);
       resetDraft();
@@ -317,6 +392,422 @@ function App() {
       setDetailId(null);
       setView("all");
     }
+  };
+
+  const handleCreateCollection = () => {
+    const name = newCollectionName.trim();
+    if (!name) return;
+    const newCollection = {
+      id: createId(),
+      name,
+      ratingIds: [],
+      createdAt: Date.now(),
+    };
+    setCollections((prev) => [newCollection, ...prev]);
+    setNewCollectionName("");
+  };
+
+  const handleRenameCollection = (collectionId, newName) => {
+    const name = newName.trim();
+    if (!name) return;
+    setCollections((prev) =>
+      prev.map((col) => (col.id === collectionId ? { ...col, name } : col))
+    );
+    setRenamingCollectionId(null);
+    setRenamingCollectionName("");
+  };
+
+  const handleDeleteCollection = (collection) => {
+    const confirmed = window.confirm(
+      `Eliminare la collezione "${collection.name}"?`
+    );
+    if (!confirmed) return;
+    setCollections((prev) => prev.filter((col) => col.id !== collection.id));
+    if (collectionDetailId === collection.id) {
+      setCollectionDetailId(null);
+      setView("collections");
+    }
+  };
+
+  const handleToggleRatingInCollection = (collectionId, ratingId) => {
+    setCollections((prev) =>
+      prev.map((col) => {
+        if (col.id !== collectionId) return col;
+        const exists = col.ratingIds.includes(ratingId);
+        const nextRatingIds = exists
+          ? col.ratingIds.filter((id) => id !== ratingId)
+          : [...col.ratingIds, ratingId];
+        return { ...col, ratingIds: nextRatingIds };
+      })
+    );
+  };
+
+  const handleOpenCollectionDetail = (collectionId) => {
+    setCollectionDetailId(collectionId);
+    setView("collection-detail");
+  };
+
+  const handleToggleSelectedCollection = (collectionId) => {
+    setSelectedCollectionIds((prev) =>
+      prev.includes(collectionId)
+        ? prev.filter((id) => id !== collectionId)
+        : [...prev, collectionId]
+    );
+  };
+
+  const handleExportData = () => {
+    const exportData = {
+      version: 1,
+      exportedAt: Date.now(),
+      ratings,
+      collections,
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const dateStr = new Date().toISOString().split("T")[0];
+    link.download = `quette-backup-${dateStr}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportData = (file, mode) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target.result);
+        if (!imported.version || !Array.isArray(imported.ratings)) {
+          setImportStatus("File non valido: struttura errata.");
+          return;
+        }
+        if (mode === "replace") {
+          setRatings(imported.ratings || []);
+          setCollections(imported.collections || []);
+          setImportStatus("Dati sostituiti con successo.");
+        } else if (mode === "merge") {
+          const existingIds = new Set(ratings.map((r) => r.id));
+          const newRatings = (imported.ratings || []).filter(
+            (r) => !existingIds.has(r.id)
+          );
+          setRatings((prev) => [...prev, ...newRatings]);
+          const existingCollectionIds = new Set(collections.map((c) => c.id));
+          const newCollections = (imported.collections || []).filter(
+            (c) => !existingCollectionIds.has(c.id)
+          );
+          setCollections((prev) => [...prev, ...newCollections]);
+          setImportStatus(
+            `Uniti ${newRatings.length} voti e ${newCollections.length} collezioni.`
+          );
+        }
+      } catch (err) {
+        setImportStatus("Errore durante la lettura del file.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleShareAsImage = async (rating) => {
+    await document.fonts.ready;
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const padding = 40;
+    const cardWidth = 600;
+
+    ctx.font = '16px "Press Start 2P"';
+    const titleLines = wrapText(ctx, rating.title, cardWidth - padding * 2);
+    ctx.font = '12px "Press Start 2P"';
+    const flavorLines = wrapText(ctx, rating.flavor, cardWidth - padding * 2);
+    const ingredientChipsHeight =
+      Math.ceil(rating.ingredients.length / 3) * 40;
+    const cardHeight =
+      padding * 2 +
+      60 +
+      titleLines.length * 24 +
+      20 +
+      40 +
+      20 +
+      120 +
+      20 +
+      flavorLines.length * 20 +
+      20 +
+      ingredientChipsHeight +
+      40;
+
+    canvas.width = cardWidth;
+    canvas.height = cardHeight;
+
+    ctx.fillStyle = "#fff3da";
+    ctx.fillRect(0, 0, cardWidth, cardHeight);
+    ctx.strokeStyle = "#2d2016";
+    ctx.lineWidth = 8;
+    ctx.strokeRect(4, 4, cardWidth - 8, cardHeight - 8);
+
+    let y = padding;
+
+    ctx.fillStyle = "#4bb4b3";
+    ctx.fillRect(padding, y, 120, 40);
+    ctx.strokeStyle = "#2d2016";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(padding, y, 120, 40);
+    ctx.fillStyle = "#2d2016";
+    ctx.font = '10px "Press Start 2P"';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(rating.type.toUpperCase(), padding + 60, y + 20);
+
+    y += 60;
+
+    ctx.fillStyle = "#2d2016";
+    ctx.font = '16px "Press Start 2P"';
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    for (const line of titleLines) {
+      ctx.fillText(line, padding, y);
+      y += 24;
+    }
+
+    y += 20;
+
+    const sliceWidth = 30;
+    const sliceHeight = 28;
+    const sliceGap = 10;
+    const slicesPerRow = 5;
+    for (let i = 0; i < PIZZA_SLICES; i++) {
+      const col = i % slicesPerRow;
+      const row = Math.floor(i / slicesPerRow);
+      const x = padding + col * (sliceWidth + sliceGap);
+      const sliceY = y + row * (sliceHeight + sliceGap);
+
+      ctx.fillStyle = i < rating.slices ? "#f7c84b" : "#d0d0d0";
+      ctx.beginPath();
+      ctx.moveTo(x + sliceWidth / 2, sliceY);
+      ctx.lineTo(x + sliceWidth, sliceY + sliceHeight);
+      ctx.lineTo(x, sliceY + sliceHeight);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = "#b67a39";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      if (i < rating.slices) {
+        ctx.fillStyle = "#e4492c";
+        ctx.beginPath();
+        ctx.arc(x + sliceWidth / 2 - 4, sliceY + 12, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + sliceWidth / 2 + 6, sliceY + 16, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    y += 120;
+
+    ctx.fillStyle = "#2d2016";
+    ctx.font = '12px "Press Start 2P"';
+    for (const line of flavorLines) {
+      ctx.fillText(line, padding, y);
+      y += 20;
+    }
+
+    y += 20;
+
+    const chipWidth = (cardWidth - padding * 2 - 20) / 3;
+    rating.ingredients.forEach((ingredient, idx) => {
+      const col = idx % 3;
+      const row = Math.floor(idx / 3);
+      const chipX = padding + col * (chipWidth + 10);
+      const chipY = y + row * 40;
+
+      ctx.fillStyle = "#fffdfa";
+      ctx.fillRect(chipX, chipY, chipWidth, 30);
+      ctx.strokeStyle = "#2d2016";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(chipX, chipY, chipWidth, 30);
+
+      ctx.fillStyle = "#2d2016";
+      ctx.font = '9px "Press Start 2P"';
+      ctx.textAlign = "center";
+      ctx.fillText(
+        ingredient.length > 12
+          ? ingredient.substring(0, 10) + ".."
+          : ingredient,
+        chipX + chipWidth / 2,
+        chipY + 15
+      );
+    });
+
+    y += Math.ceil(rating.ingredients.length / 3) * 40 + 20;
+
+    ctx.fillStyle = "#2d2016";
+    ctx.font = '10px "Press Start 2P"';
+    ctx.textAlign = "center";
+    ctx.fillText("QUETTE", cardWidth / 2, y);
+
+    canvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${rating.title.replace(/\s+/g, "-")}.png`;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+  };
+
+  const handleCopyShareImage = async (rating) => {
+    await document.fonts.ready;
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const padding = 40;
+    const cardWidth = 600;
+
+    ctx.font = '16px "Press Start 2P"';
+    const titleLines = wrapText(ctx, rating.title, cardWidth - padding * 2);
+    ctx.font = '12px "Press Start 2P"';
+    const flavorLines = wrapText(ctx, rating.flavor, cardWidth - padding * 2);
+    const ingredientChipsHeight =
+      Math.ceil(rating.ingredients.length / 3) * 40;
+    const cardHeight =
+      padding * 2 +
+      60 +
+      titleLines.length * 24 +
+      20 +
+      40 +
+      20 +
+      120 +
+      20 +
+      flavorLines.length * 20 +
+      20 +
+      ingredientChipsHeight +
+      40;
+
+    canvas.width = cardWidth;
+    canvas.height = cardHeight;
+
+    ctx.fillStyle = "#fff3da";
+    ctx.fillRect(0, 0, cardWidth, cardHeight);
+    ctx.strokeStyle = "#2d2016";
+    ctx.lineWidth = 8;
+    ctx.strokeRect(4, 4, cardWidth - 8, cardHeight - 8);
+
+    let y = padding;
+
+    ctx.fillStyle = "#4bb4b3";
+    ctx.fillRect(padding, y, 120, 40);
+    ctx.strokeStyle = "#2d2016";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(padding, y, 120, 40);
+    ctx.fillStyle = "#2d2016";
+    ctx.font = '10px "Press Start 2P"';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(rating.type.toUpperCase(), padding + 60, y + 20);
+
+    y += 60;
+
+    ctx.fillStyle = "#2d2016";
+    ctx.font = '16px "Press Start 2P"';
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    for (const line of titleLines) {
+      ctx.fillText(line, padding, y);
+      y += 24;
+    }
+
+    y += 20;
+
+    const sliceWidth = 30;
+    const sliceHeight = 28;
+    const sliceGap = 10;
+    const slicesPerRow = 5;
+    for (let i = 0; i < PIZZA_SLICES; i++) {
+      const col = i % slicesPerRow;
+      const row = Math.floor(i / slicesPerRow);
+      const x = padding + col * (sliceWidth + sliceGap);
+      const sliceY = y + row * (sliceHeight + sliceGap);
+
+      ctx.fillStyle = i < rating.slices ? "#f7c84b" : "#d0d0d0";
+      ctx.beginPath();
+      ctx.moveTo(x + sliceWidth / 2, sliceY);
+      ctx.lineTo(x + sliceWidth, sliceY + sliceHeight);
+      ctx.lineTo(x, sliceY + sliceHeight);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = "#b67a39";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      if (i < rating.slices) {
+        ctx.fillStyle = "#e4492c";
+        ctx.beginPath();
+        ctx.arc(x + sliceWidth / 2 - 4, sliceY + 12, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + sliceWidth / 2 + 6, sliceY + 16, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    y += 120;
+
+    ctx.fillStyle = "#2d2016";
+    ctx.font = '12px "Press Start 2P"';
+    for (const line of flavorLines) {
+      ctx.fillText(line, padding, y);
+      y += 20;
+    }
+
+    y += 20;
+
+    const chipWidth = (cardWidth - padding * 2 - 20) / 3;
+    rating.ingredients.forEach((ingredient, idx) => {
+      const col = idx % 3;
+      const row = Math.floor(idx / 3);
+      const chipX = padding + col * (chipWidth + 10);
+      const chipY = y + row * 40;
+
+      ctx.fillStyle = "#fffdfa";
+      ctx.fillRect(chipX, chipY, chipWidth, 30);
+      ctx.strokeStyle = "#2d2016";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(chipX, chipY, chipWidth, 30);
+
+      ctx.fillStyle = "#2d2016";
+      ctx.font = '9px "Press Start 2P"';
+      ctx.textAlign = "center";
+      ctx.fillText(
+        ingredient.length > 12
+          ? ingredient.substring(0, 10) + ".."
+          : ingredient,
+        chipX + chipWidth / 2,
+        chipY + 15
+      );
+    });
+
+    y += Math.ceil(rating.ingredients.length / 3) * 40 + 20;
+
+    ctx.fillStyle = "#2d2016";
+    ctx.font = '10px "Press Start 2P"';
+    ctx.textAlign = "center";
+    ctx.fillText("QUETTE", cardWidth / 2, y);
+
+    canvas.toBlob(async (blob) => {
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+        alert("Immagine copiata negli appunti!");
+      } catch (err) {
+        alert("Errore durante la copia negli appunti.");
+      }
+    });
   };
 
   return (
@@ -345,6 +836,13 @@ function App() {
             onClick={() => handleViewChange("all")}
           >
             Tutti i voti
+          </button>
+          <button
+            type="button"
+            className={`nav-button ${view === "collections" || view === "collection-detail" ? "active" : ""}`}
+            onClick={() => handleViewChange("collections")}
+          >
+            Collezioni
           </button>
           <button
             type="button"
@@ -378,6 +876,9 @@ function App() {
             totalCount={ratings.length}
             onNew={handleStartNew}
             onOpenDetail={handleOpenDetail}
+            onExport={handleExportData}
+            onImport={handleImportData}
+            importStatus={importStatus}
           />
         )}
 
@@ -387,11 +888,14 @@ function App() {
             error={error}
             customIngredient={customIngredient}
             isEditing={Boolean(editingId)}
+            collections={collections}
+            selectedCollectionIds={selectedCollectionIds}
             onChangeDraft={setDraft}
             onChangeCustomIngredient={setCustomIngredient}
             onToggleIngredient={handleToggleIngredient}
             onRemoveIngredient={handleRemoveIngredient}
             onAddCustomIngredient={handleAddCustomIngredient}
+            onToggleSelectedCollection={handleToggleSelectedCollection}
             onSubmit={handleSubmit}
             onCancel={handleCancelEdit}
           />
@@ -414,9 +918,49 @@ function App() {
         {view === "detail" && (
           <RatingDetail
             rating={ratings.find((item) => item.id === detailId) || null}
+            collections={collections}
             onBack={() => handleViewChange("all")}
             onEdit={(rating) => handleEditRating(rating, "detail")}
             onDelete={handleDeleteRating}
+            onToggleRatingInCollection={handleToggleRatingInCollection}
+            onShareAsImage={handleShareAsImage}
+            onCopyShareImage={handleCopyShareImage}
+          />
+        )}
+
+        {view === "collections" && (
+          <Collections
+            collections={collections}
+            newCollectionName={newCollectionName}
+            renamingCollectionId={renamingCollectionId}
+            renamingCollectionName={renamingCollectionName}
+            onChangeNewCollectionName={setNewCollectionName}
+            onCreateCollection={handleCreateCollection}
+            onStartRename={(id, name) => {
+              setRenamingCollectionId(id);
+              setRenamingCollectionName(name);
+            }}
+            onCancelRename={() => {
+              setRenamingCollectionId(null);
+              setRenamingCollectionName("");
+            }}
+            onChangeRenamingName={setRenamingCollectionName}
+            onRenameCollection={handleRenameCollection}
+            onDeleteCollection={handleDeleteCollection}
+            onOpenDetail={handleOpenCollectionDetail}
+          />
+        )}
+
+        {view === "collection-detail" && (
+          <CollectionDetail
+            collection={
+              collections.find((col) => col.id === collectionDetailId) || null
+            }
+            ratings={ratings}
+            onBack={() => handleViewChange("collections")}
+            onRemoveRating={(collectionId, ratingId) =>
+              handleToggleRatingInCollection(collectionId, ratingId)
+            }
           />
         )}
       </main>
@@ -424,7 +968,7 @@ function App() {
   );
 }
 
-function Home({ ratings, totalCount, onNew, onOpenDetail }) {
+function Home({ ratings, totalCount, onNew, onOpenDetail, onExport, onImport, importStatus }) {
   return (
     <section className="panel">
       <header className="panel-header">
@@ -456,6 +1000,11 @@ function Home({ ratings, totalCount, onNew, onOpenDetail }) {
           ))}
         </div>
       )}
+      <DataManagement
+        onExport={onExport}
+        onImport={onImport}
+        importStatus={importStatus}
+      />
     </section>
   );
 }
@@ -465,11 +1014,14 @@ function NewRating({
   error,
   customIngredient,
   isEditing,
+  collections,
+  selectedCollectionIds,
   onChangeDraft,
   onChangeCustomIngredient,
   onToggleIngredient,
   onRemoveIngredient,
   onAddCustomIngredient,
+  onToggleSelectedCollection,
   onSubmit,
   onCancel,
 }) {
@@ -593,6 +1145,24 @@ function NewRating({
           )}
         </div>
 
+        {collections.length > 0 && !isEditing && (
+          <div className="ingredient-section">
+            <h3>Aggiungi a collezioni (opzionale)</h3>
+            <div className="pill-grid">
+              {collections.map((col) => (
+                <button
+                  key={col.id}
+                  type="button"
+                  className={`pill ${selectedCollectionIds.includes(col.id) ? "active" : ""}`}
+                  onClick={() => onToggleSelectedCollection(col.id)}
+                >
+                  {col.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {error ? <p className="error">{error}</p> : null}
 
         <div className="form-actions">
@@ -682,7 +1252,26 @@ function AllRatings({ ratings, total, searchTerm, filterType, onFilterChange, so
   );
 }
 
-function RatingDetail({ rating, onBack, onEdit, onDelete }) {
+function RatingDetail({ rating, collections, onBack, onEdit, onDelete, onToggleRatingInCollection, onShareAsImage, onCopyShareImage }) {
+  if (!rating) {
+    return (
+      <section className="panel">
+        <header className="panel-header">
+          <div>
+            <h2>Dettaglio voto</h2>
+            <p className="muted">Controlla ingredienti e fette del voto.</p>
+          </div>
+          <button type="button" className="nav-button" onClick={onBack}>
+            Torna ai voti
+          </button>
+        </header>
+        <div className="empty-state">
+          <p>Questo voto non esiste piu'.</p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="panel">
       <header className="panel-header">
@@ -694,13 +1283,48 @@ function RatingDetail({ rating, onBack, onEdit, onDelete }) {
           Torna ai voti
         </button>
       </header>
-      {rating ? (
-        <RatingCard rating={rating} onEdit={onEdit} onDelete={onDelete} />
-      ) : (
-        <div className="empty-state">
-          <p>Questo voto non esiste piu'.</p>
+      <RatingCard rating={rating} onEdit={onEdit} onDelete={onDelete} />
+
+      {collections.length > 0 && (
+        <div className="collection-assign">
+          <h3>Collezioni</h3>
+          <div className="pill-grid">
+            {collections.map((col) => {
+              const isInCollection = col.ratingIds.includes(rating.id);
+              return (
+                <button
+                  key={col.id}
+                  type="button"
+                  className={`pill ${isInCollection ? "active" : ""}`}
+                  onClick={() => onToggleRatingInCollection(col.id, rating.id)}
+                >
+                  {col.name}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
+
+      <div className="share-section">
+        <h3>Condividi</h3>
+        <div className="card-actions">
+          <button
+            type="button"
+            className="nav-button"
+            onClick={() => onShareAsImage(rating)}
+          >
+            Scarica immagine
+          </button>
+          <button
+            type="button"
+            className="nav-button"
+            onClick={() => onCopyShareImage(rating)}
+          >
+            Copia immagine
+          </button>
+        </div>
+      </div>
     </section>
   );
 }
@@ -808,6 +1432,263 @@ function PizzaMeter({ value, max = PIZZA_SLICES, onSelect }) {
       <span className="slice-count">
         {value}/{max}
       </span>
+    </div>
+  );
+}
+
+function Collections({
+  collections,
+  newCollectionName,
+  renamingCollectionId,
+  renamingCollectionName,
+  onChangeNewCollectionName,
+  onCreateCollection,
+  onStartRename,
+  onCancelRename,
+  onChangeRenamingName,
+  onRenameCollection,
+  onDeleteCollection,
+  onOpenDetail,
+}) {
+  return (
+    <section className="panel">
+      <header className="panel-header">
+        <div>
+          <h2>Collezioni</h2>
+          <p className="muted">
+            {collections.length === 0
+              ? "Nessuna collezione ancora."
+              : `${collections.length} collezioni salvate.`}
+          </p>
+        </div>
+      </header>
+
+      <div className="collection-create">
+        <input
+          type="text"
+          placeholder="Nome nuova collezione..."
+          value={newCollectionName}
+          onChange={(e) => onChangeNewCollectionName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              onCreateCollection();
+            }
+          }}
+        />
+        <button
+          type="button"
+          className="nav-button cta"
+          onClick={onCreateCollection}
+        >
+          Crea
+        </button>
+      </div>
+
+      {collections.length === 0 ? (
+        <div className="empty-state">
+          <p>Nessuna collezione. Crea la prima collezione.</p>
+        </div>
+      ) : (
+        <div className="collection-list">
+          {collections.map((col) => (
+            <div key={col.id} className="card">
+              {renamingCollectionId === col.id ? (
+                <div className="collection-rename">
+                  <input
+                    type="text"
+                    value={renamingCollectionName}
+                    onChange={(e) => onChangeRenamingName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        onRenameCollection(col.id, renamingCollectionName);
+                      } else if (e.key === "Escape") {
+                        onCancelRename();
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="nav-button"
+                    onClick={() =>
+                      onRenameCollection(col.id, renamingCollectionName)
+                    }
+                  >
+                    Salva
+                  </button>
+                  <button
+                    type="button"
+                    className="nav-button"
+                    onClick={onCancelRename}
+                  >
+                    Annulla
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="card-header">
+                    <div>
+                      <h3>{col.name}</h3>
+                      <p className="muted">{col.ratingIds.length} voti</p>
+                    </div>
+                  </div>
+                  <div className="card-actions">
+                    <button
+                      type="button"
+                      className="nav-button"
+                      onClick={() => onOpenDetail(col.id)}
+                    >
+                      Apri
+                    </button>
+                    <button
+                      type="button"
+                      className="nav-button"
+                      onClick={() => onStartRename(col.id, col.name)}
+                    >
+                      Rinomina
+                    </button>
+                    <button
+                      type="button"
+                      className="nav-button danger"
+                      onClick={() => onDeleteCollection(col)}
+                    >
+                      Elimina
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CollectionDetail({ collection, ratings, onBack, onRemoveRating }) {
+  if (!collection) {
+    return (
+      <section className="panel">
+        <header className="panel-header">
+          <div>
+            <h2>Dettaglio collezione</h2>
+            <p className="muted">Questa collezione non esiste piu'.</p>
+          </div>
+          <button type="button" className="nav-button" onClick={onBack}>
+            Torna alle collezioni
+          </button>
+        </header>
+        <div className="empty-state">
+          <p>Collezione non trovata.</p>
+        </div>
+      </section>
+    );
+  }
+
+  const collectionRatings = ratings.filter((r) =>
+    collection.ratingIds.includes(r.id)
+  );
+
+  return (
+    <section className="panel">
+      <header className="panel-header">
+        <div>
+          <h2>{collection.name}</h2>
+          <p className="muted">{collectionRatings.length} voti nella collezione.</p>
+        </div>
+        <button type="button" className="nav-button" onClick={onBack}>
+          Torna alle collezioni
+        </button>
+      </header>
+
+      {collectionRatings.length === 0 ? (
+        <div className="empty-state">
+          <p>Nessun voto in questa collezione.</p>
+        </div>
+      ) : (
+        <div className="cards">
+          {collectionRatings.map((rating, index) => (
+            <div key={rating.id}>
+              <RatingCard rating={rating} delay={index} />
+              <div className="card-actions" style={{ marginTop: "8px" }}>
+                <button
+                  type="button"
+                  className="nav-button danger"
+                  onClick={() => onRemoveRating(collection.id, rating.id)}
+                >
+                  Rimuovi dalla collezione
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function DataManagement({ onExport, onImport, importStatus }) {
+  const [importMode, setImportMode] = useState("merge");
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      onImport(file, importMode);
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <div className="data-management">
+      <h3>Backup e ripristino</h3>
+      <div className="data-actions">
+        <button
+          type="button"
+          className="nav-button"
+          onClick={onExport}
+        >
+          Esporta dati
+        </button>
+        <div className="import-group">
+          <div className="pill-grid">
+            <button
+              type="button"
+              className={`pill ${importMode === "merge" ? "active" : ""}`}
+              onClick={() => setImportMode("merge")}
+            >
+              Unisci
+            </button>
+            <button
+              type="button"
+              className={`pill ${importMode === "replace" ? "active" : ""}`}
+              onClick={() => setImportMode("replace")}
+            >
+              Sostituisci
+            </button>
+          </div>
+          <input
+            type="file"
+            accept="application/json"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+            id="import-file-input"
+          />
+          <button
+            type="button"
+            className="nav-button"
+            onClick={() => document.getElementById("import-file-input").click()}
+          >
+            Importa dati
+          </button>
+        </div>
+      </div>
+      {importStatus && (
+        <div className="import-status">
+          <p>{importStatus}</p>
+        </div>
+      )}
     </div>
   );
 }
