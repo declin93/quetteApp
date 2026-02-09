@@ -14,7 +14,7 @@ Deploy: push to `main` — GitHub Pages serves from the `dist/` folder. Base pat
 
 ## Architecture
 
-**Monolithic single-file app.** All logic lives in `src/App.jsx` (~1700 lines) — no router, no external state library, no TypeScript, no tests, no linter.
+**Multi-file component architecture.** No router, no external state library, no TypeScript, no tests, no linter.
 
 ### File structure
 
@@ -23,8 +23,20 @@ index.html              HTML entry (lang="it")
 vite.config.js          Vite + React + vite-plugin-pwa
 src/
   main.jsx              ReactDOM root
-  App.jsx               All components and logic
-  styles.css            All styles
+  App.jsx               Root component (state, handlers, view routing)
+  constants.js           Shared constants and utility functions
+  shareImage.js          Canvas image generation for sharing
+  styles.css             All styles
+  components/
+    Home.jsx             Recent ratings + data import/export
+    NewRating.jsx        Create or edit a rating
+    AllRatings.jsx       Filterable/sortable list
+    RatingDetail.jsx     Single rating + share + collections
+    RatingCard.jsx       Reusable rating card display
+    PizzaMeter.jsx       Pizza slice score display/selector
+    Collections.jsx      Manage collections
+    CollectionDetail.jsx Ratings within a collection
+    DataManagement.jsx   Export/import backup controls
 public/
   icon.svg              App icon / favicon
 ```
