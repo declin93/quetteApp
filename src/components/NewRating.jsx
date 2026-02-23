@@ -1,6 +1,7 @@
 import { MEDIA_TYPES, STANDARD_INGREDIENTS, normalizeIngredient } from "../constants";
 import PizzaMeter from "./PizzaMeter";
 
+// Form unificato per creare e modificare un voto — isEditing controlla testo e comportamento
 function NewRating({
   draft,
   error,
@@ -70,6 +71,7 @@ function NewRating({
           </label>
           <div className="field">
             <span>Fette di pizza</span>
+            {/* PizzaMeter riceve onSelect → diventa interattivo (bottoni invece di span) */}
             <PizzaMeter
               value={draft.slices}
               onSelect={(value) =>
@@ -83,6 +85,7 @@ function NewRating({
           <h3>Ingredienti standard</h3>
           <div className="pill-grid">
             {STANDARD_INGREDIENTS.map((ingredient) => {
+              // Confronta normalizzato per non avere falsi negativi su maiuscole/spazi
               const active = draft.ingredients.some(
                 (item) =>
                   normalizeIngredient(item) ===
@@ -123,6 +126,7 @@ function NewRating({
             <p className="muted">Nessun ingrediente scelto.</p>
           ) : (
             <div className="chips">
+              {/* Cliccare un chip lo rimuove dalla selezione */}
               {draft.ingredients.map((ingredient) => (
                 <button
                   key={ingredient}
@@ -137,6 +141,7 @@ function NewRating({
           )}
         </div>
 
+        {/* Il selettore di collezioni si mostra solo in fase di creazione, non di modifica */}
         {collections.length > 0 && !isEditing && (
           <div className="ingredient-section">
             <h3>Aggiungi a collezioni (opzionale)</h3>
@@ -161,6 +166,7 @@ function NewRating({
           <button type="submit" className="nav-button cta">
             {isEditing ? "Aggiorna voto" : "Salva voto"}
           </button>
+          {/* Il tasto Annulla compare solo in modifica, non in creazione */}
           {isEditing ? (
             <button type="button" className="nav-button" onClick={onCancel}>
               Annulla

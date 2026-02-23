@@ -31,6 +31,7 @@ function Collections({
           placeholder="Nome nuova collezione..."
           value={newCollectionName}
           onChange={(e) => onChangeNewCollectionName(e.target.value)}
+          // Permette di creare la collezione premendo Invio senza cliccare il bottone
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -55,6 +56,7 @@ function Collections({
         <div className="collection-list">
           {collections.map((col) => (
             <div key={col.id} className="card">
+              {/* Se questa collezione è quella in fase di rinomina, mostra l'input inline */}
               {renamingCollectionId === col.id ? (
                 <div className="collection-rename">
                   <input
@@ -66,10 +68,11 @@ function Collections({
                         e.preventDefault();
                         onRenameCollection(col.id, renamingCollectionName);
                       } else if (e.key === "Escape") {
+                        // Escape annulla senza salvare
                         onCancelRename();
                       }
                     }}
-                    autoFocus
+                    autoFocus  // focus automatico all'apertura dell'input di rinomina
                   />
                   <button
                     type="button"
@@ -89,6 +92,7 @@ function Collections({
                   </button>
                 </div>
               ) : (
+                // Vista normale della collezione con le azioni
                 <>
                   <div className="card-header">
                     <div>
@@ -104,6 +108,7 @@ function Collections({
                     >
                       Apri
                     </button>
+                    {/* onStartRename imposta renamingCollectionId → fa apparire l'input sopra */}
                     <button
                       type="button"
                       className="nav-button"

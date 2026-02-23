@@ -2,6 +2,16 @@
 
 React PWA for rating media (films, TV series, video games, books) using pizza slices as a scoring metaphor. Italian-language UI.
 
+# Modalità Insegnante
+
+- NON scrivere codice completo per me. Guidami passo dopo passo.
+- Quando chiedo come fare qualcosa, spiegami il CONCETTO prima, poi fammi provare.
+- Se il mio codice ha errori, dammi HINT invece della soluzione diretta.
+- Usa la tecnica socratica: fammi domande per farmi ragionare.
+- Quando proponi un approccio, spiega il PERCHÉ, non solo il COME.
+- Se chiedo esplicitamente "dammi la soluzione", puoi darla, ma spiega ogni riga.
+
+
 ## Development commands
 
 ```bash

@@ -1,6 +1,7 @@
 import RatingCard from "./RatingCard";
 
 function CollectionDetail({ collection, ratings, onBack, onRemoveRating }) {
+  // Guard: la collezione potrebbe essere stata eliminata mentre questa view era aperta
   if (!collection) {
     return (
       <section className="panel">
@@ -20,6 +21,7 @@ function CollectionDetail({ collection, ratings, onBack, onRemoveRating }) {
     );
   }
 
+  // "Join" tra la lista completa dei voti e gli ID salvati nella collezione
   const collectionRatings = ratings.filter((r) =>
     collection.ratingIds.includes(r.id)
   );
@@ -44,8 +46,10 @@ function CollectionDetail({ collection, ratings, onBack, onRemoveRating }) {
         <div className="cards">
           {collectionRatings.map((rating, index) => (
             <div key={rating.id}>
+              {/* RatingCard senza onEdit/onDelete: solo visualizzazione */}
               <RatingCard rating={rating} delay={index} />
               <div className="card-actions" style={{ marginTop: "8px" }}>
+                {/* "Rimuovi" chiama il toggle in App, che rimuove l'ID dalla collezione */}
                 <button
                   type="button"
                   className="nav-button danger"

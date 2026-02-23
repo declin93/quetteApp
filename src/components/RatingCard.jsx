@@ -3,12 +3,13 @@ import PizzaMeter from "./PizzaMeter";
 
 function RatingCard({
   rating,
-  compact = false,
-  delay = 0,
+  compact = false,  // true → layout ridotto (Home), false → card completa (AllRatings)
+  delay = 0,        // indice usato per sfasare l'animazione CSS di ingresso
   onEdit,
   onDelete,
-  onOpen,
+  onOpen,           // se presente, la card diventa cliccabile come un link
 }) {
+  // Accessibilità tastiera: Enter e Spazio attivano onOpen come farebbe un click
   const handleKeyDown = (event) => {
     if (!onOpen) return;
     if (event.key === "Enter" || event.key === " ") {
@@ -22,10 +23,13 @@ function RatingCard({
       className={`card ${compact ? "compact" : ""} ${
         onOpen ? "clickable" : ""
       }`}
+      // animationDelay sfasato per le card: 0.08s × indice crea un effetto "a cascata"
       style={{ animationDelay: `${delay * 0.08}s` }}
       onClick={onOpen}
       onKeyDown={handleKeyDown}
+      // tabIndex=0 rende l'elemento raggiungibile col Tab, ma solo se è cliccabile
       tabIndex={onOpen ? 0 : undefined}
+      // role e aria-label comunicano ai screen reader che si tratta di un elemento interattivo
       role={onOpen ? "button" : undefined}
       aria-label={onOpen ? `Apri dettaglio ${rating.title}` : undefined}
     >
@@ -50,6 +54,7 @@ function RatingCard({
             <button
               type="button"
               className="nav-button"
+              // stopPropagation evita che il click sul bottone apra il dettaglio della card
               onClick={(event) => { event.stopPropagation(); onEdit(rating); }}
             >
               Modifica
@@ -66,6 +71,7 @@ function RatingCard({
           ) : null}
         </div>
       ) : null}
+      {/* La data viene nascosta nella versione compact (Home) */}
       {!compact ? (
         <p className="muted">Inserito il {formatDate(rating.createdAt)}</p>
       ) : null}

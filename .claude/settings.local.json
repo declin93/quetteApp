@@ -14,7 +14,8 @@
       "Bash(git -C \"C:\\\\Users\\\\declin\\\\Documents\\\\QuetteApp\" push)",
       "Bash(git -C \"C:\\\\Users\\\\declin\\\\Documents\\\\QuetteApp\" log --oneline -20)",
       "Bash(timeout:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(del \"C:\\\\Users\\\\declin\\\\Documents\\\\Coding\\\\QuetteApp\\\\nul\")"
     ]
   }
 }

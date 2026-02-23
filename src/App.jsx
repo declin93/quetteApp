@@ -9,7 +9,11 @@ import Collections from "./components/Collections";
 import CollectionDetail from "./components/CollectionDetail";
 
 function App() {
+  // "view" è l'unico router dell'app: cambiando questa stringa si cambia pagina
   const [view, setView] = useState("home");
+
+  // La funzione passata a useState viene eseguita solo al primo render (lazy initializer)
+  // Serve a leggere localStorage una volta sola invece di ad ogni render
   const [ratings, setRatings] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -22,15 +26,23 @@ function App() {
     }
     return [];
   });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("");
   const [sortBy, setSortBy] = useState("newest");
+
+  // "draft" è il form temporaneo per creare/modificare un voto, resettato dopo il salvataggio
   const [draft, setDraft] = useState(emptyDraft);
   const [customIngredient, setCustomIngredient] = useState("");
   const [error, setError] = useState("");
+
+  // Se editingId è valorizzato, il form è in modalità modifica invece che creazione
   const [editingId, setEditingId] = useState(null);
   const [detailId, setDetailId] = useState(null);
+
+  // Ricorda da dove è partita la modifica, per tornare alla view giusta dopo il salvataggio
   const [editReturnView, setEditReturnView] = useState("all");
+
   const [collections, setCollections] = useState(() => {
     try {
       const stored = localStorage.getItem(COLLECTIONS_KEY);
@@ -43,19 +55,25 @@ function App() {
     }
     return [];
   });
+
   const [collectionDetailId, setCollectionDetailId] = useState(null);
   const [newCollectionName, setNewCollectionName] = useState("");
   const [renamingCollectionId, setRenamingCollectionId] = useState(null);
   const [renamingCollectionName, setRenamingCollectionName] = useState("");
+
+  // IDs delle collezioni selezionate durante la creazione di un nuovo voto
   const [selectedCollectionIds, setSelectedCollectionIds] = useState([]);
   const [importStatus, setImportStatus] = useState("");
 
 
 
+  // Salva su localStorage ogni volta che ratings cambia
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ratings));
   }, [ratings]);
 
+  // Sincronizza i dati se l'utente ha l'app aperta in più schede contemporaneamente
+  // L'evento "storage" si attiva quando un'altra scheda scrive su localStorage
   useEffect(() => {
     const handleStorage = (event) => {
       if (event.key !== STORAGE_KEY) return;
@@ -65,6 +83,7 @@ function App() {
       } catch { /* ignore malformed data */ }
     };
     window.addEventListener("storage", handleStorage);
+    // Il return pulisce il listener quando il componente viene smontato
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
@@ -84,6 +103,7 @@ function App() {
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
+  // useMemo evita di ricalcolare il valore ad ogni render: lo ricalcola solo quando cambia la dipendenza
   const sortedRatings = useMemo(() => {
     return [...ratings].sort((a, b) => b.createdAt - a.createdAt);
   }, [ratings]);
@@ -93,6 +113,7 @@ function App() {
     [sortedRatings]
   );
 
+  // filteredRatings dipende da più stati: si ricalcola solo quando uno di essi cambia
   const filteredRatings = useMemo(() => {
     let result = [...ratings];
 
@@ -130,6 +151,7 @@ function App() {
     return result;
   }, [ratings, filterType, searchTerm, sortBy]);
 
+  // Toggle: se l'ingrediente è già presente lo rimuove, altrimenti lo aggiunge
   const handleToggleIngredient = (ingredient) => {
     setDraft((prev) => {
       const exists = prev.ingredients.some(
@@ -158,6 +180,7 @@ function App() {
     const cleaned = customIngredient.trim();
     if (!cleaned) return;
     setDraft((prev) => {
+      // Evita duplicati confrontando in lowercase senza spazi
       const exists = prev.ingredients.some(
         (item) => normalizeIngredient(item) === normalizeIngredient(cleaned)
       );
@@ -193,6 +216,7 @@ function App() {
       return;
     }
 
+    // Ramo modifica: aggiorna il voto esistente preservando id e createdAt originali
     if (editingId) {
       const targetId = editingId;
       setRatings((prev) => {
@@ -223,6 +247,7 @@ function App() {
       return;
     }
 
+    // Ramo creazione: costruisce un nuovo oggetto Rating e lo aggiunge in testa alla lista
     const newEntry = {
       id: createId(),
       title,
@@ -235,6 +260,7 @@ function App() {
 
     setRatings((prev) => [newEntry, ...prev]);
 
+    // Aggiunge il nuovo voto alle collezioni selezionate durante la compilazione del form
     if (selectedCollectionIds.length > 0) {
       setCollections((prev) =>
         prev.map((col) =>
@@ -249,6 +275,7 @@ function App() {
     setView("home");
   };
 
+  // Centralizza la navigazione e azzera i puntatori "correnti" quando cambiano view
   const handleViewChange = (nextView) => {
     setView(nextView);
     if (nextView !== "new") {
@@ -274,6 +301,7 @@ function App() {
   const handleSearchChange = (event) => {
     const value = event.target.value;
     setSearchTerm(value);
+    // Se l'utente cerca dalla Home, porta direttamente alla lista filtrata
     if (view !== "all") {
       setView("all");
     }
@@ -300,6 +328,7 @@ function App() {
     );
     if (!confirmed) return;
     setRatings((prev) => prev.filter((item) => item.id !== rating.id));
+    // Rimuove il voto eliminato anche da tutte le collezioni che lo contenevano
     setCollections((prev) =>
       prev.map((col) => ({
         ...col,
@@ -368,6 +397,7 @@ function App() {
     }
   };
 
+  // Aggiunge o rimuove un voto da una collezione in base alla sua presenza attuale
   const handleToggleRatingInCollection = (collectionId, ratingId) => {
     setCollections((prev) =>
       prev.map((col) => {
@@ -401,6 +431,7 @@ function App() {
       ratings,
       collections,
     };
+    // Crea un file JSON in memoria e forza il download tramite un link cliccato a codice
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
       type: "application/json",
     });
@@ -410,7 +441,7 @@ function App() {
     const dateStr = new Date().toISOString().split("T")[0];
     link.download = `quette-backup-${dateStr}.json`;
     link.click();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(url); // libera la memoria dopo il download
   };
 
   const handleImportData = (file, mode) => {
@@ -428,6 +459,7 @@ function App() {
           setCollections(imported.collections || []);
           setImportStatus("Dati sostituiti con successo.");
         } else if (mode === "merge") {
+          // "merge": aggiunge solo i voti con id non già presenti, per evitare duplicati
           const existingIds = new Set(ratings.map((r) => r.id));
           const newRatings = (imported.ratings || []).filter(
             (r) => !existingIds.has(r.id)
@@ -508,6 +540,7 @@ function App() {
         </div>
       </header>
 
+      {/* Rendering condizionale: un solo componente alla volta in base a "view" */}
       <main className="page">
         {view === "home" && (
           <Home

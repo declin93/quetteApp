@@ -1,6 +1,7 @@
 import RatingCard from "./RatingCard";
 
 function RatingDetail({ rating, collections, onBack, onEdit, onDelete, onToggleRatingInCollection, onShareAsImage, onCopyShareImage }) {
+  // Guard: se il voto è stato eliminato mentre questa view era aperta, mostra un fallback
   if (!rating) {
     return (
       <section className="panel">
@@ -33,11 +34,13 @@ function RatingDetail({ rating, collections, onBack, onEdit, onDelete, onToggleR
       </header>
       <RatingCard rating={rating} onEdit={onEdit} onDelete={onDelete} />
 
+      {/* Mostra i pill delle collezioni solo se ne esiste almeno una */}
       {collections.length > 0 && (
         <div className="collection-assign">
           <h3>Collezioni</h3>
           <div className="pill-grid">
             {collections.map((col) => {
+              // Controlla se questo voto è già dentro la collezione per colorare il pill
               const isInCollection = col.ratingIds.includes(rating.id);
               return (
                 <button

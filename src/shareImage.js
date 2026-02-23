@@ -1,5 +1,6 @@
 import { PIZZA_SLICES } from "./constants";
 
+// Spezza il testo in righe che non superano maxWidth pixel, misurando con il Canvas API
 const wrapText = (ctx, text, maxWidth) => {
   const words = text.split(" ");
   const lines = [];
@@ -18,12 +19,15 @@ const wrapText = (ctx, text, maxWidth) => {
   return lines;
 };
 
+// Disegna la card del voto su un elemento <canvas> e lo restituisce
+// L'altezza del canvas è calcolata dinamicamente in base al numero di righe di testo e ingredienti
 function renderRatingCanvas(rating) {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
   const padding = 40;
   const cardWidth = 600;
 
+  // Pre-calcola le righe di testo per sapere quanto spazio occuperanno verticalmente
   ctx.font = '16px "Press Start 2P"';
   const titleLines = wrapText(ctx, rating.title, cardWidth - padding * 2);
   ctx.font = '12px "Press Start 2P"';
@@ -47,14 +51,17 @@ function renderRatingCanvas(rating) {
   canvas.width = cardWidth;
   canvas.height = cardHeight;
 
+  // Sfondo e bordo della card
   ctx.fillStyle = "#fff3da";
   ctx.fillRect(0, 0, cardWidth, cardHeight);
   ctx.strokeStyle = "#2d2016";
   ctx.lineWidth = 8;
   ctx.strokeRect(4, 4, cardWidth - 8, cardHeight - 8);
 
+  // "y" tiene traccia della posizione verticale corrente mentre si disegnano gli elementi dall'alto
   let y = padding;
 
+  // Badge del tipo di media (film, serie tv, ecc.)
   ctx.fillStyle = "#4bb4b3";
   ctx.fillRect(padding, y, 120, 40);
   ctx.strokeStyle = "#2d2016";
@@ -68,6 +75,7 @@ function renderRatingCanvas(rating) {
 
   y += 60;
 
+  // Titolo (potenzialmente su più righe)
   ctx.fillStyle = "#2d2016";
   ctx.font = '16px "Press Start 2P"';
   ctx.textAlign = "left";
@@ -79,6 +87,7 @@ function renderRatingCanvas(rating) {
 
   y += 20;
 
+  // Griglia di fette di pizza: gialle se "attive" (slices raggiunte), grigie se no
   const sliceWidth = 30;
   const sliceHeight = 28;
   const sliceGap = 10;
@@ -90,6 +99,7 @@ function renderRatingCanvas(rating) {
     const sliceY = y + row * (sliceHeight + sliceGap);
 
     ctx.fillStyle = i < rating.slices ? "#f7c84b" : "#d0d0d0";
+    // Disegna un triangolo (fetta di pizza) con beginPath/moveTo/lineTo
     ctx.beginPath();
     ctx.moveTo(x + sliceWidth / 2, sliceY);
     ctx.lineTo(x + sliceWidth, sliceY + sliceHeight);
@@ -101,6 +111,7 @@ function renderRatingCanvas(rating) {
     ctx.lineWidth = 3;
     ctx.stroke();
 
+    // Pallini rossi (pomodoro) solo sulle fette attive
     if (i < rating.slices) {
       ctx.fillStyle = "#e4492c";
       ctx.beginPath();
@@ -114,6 +125,7 @@ function renderRatingCanvas(rating) {
 
   y += 120;
 
+  // Nome del gusto (flavor), potenzialmente su più righe
   ctx.fillStyle = "#2d2016";
   ctx.font = '12px "Press Start 2P"';
   for (const line of flavorLines) {
@@ -123,6 +135,7 @@ function renderRatingCanvas(rating) {
 
   y += 20;
 
+  // Chip degli ingredienti disposti su 3 colonne
   const chipWidth = (cardWidth - padding * 2 - 20) / 3;
   rating.ingredients.forEach((ingredient, idx) => {
     const col = idx % 3;
@@ -139,6 +152,7 @@ function renderRatingCanvas(rating) {
     ctx.fillStyle = "#2d2016";
     ctx.font = '9px "Press Start 2P"';
     ctx.textAlign = "center";
+    // Tronca il testo se supera 12 caratteri per non uscire dal chip
     ctx.fillText(
       ingredient.length > 12
         ? ingredient.substring(0, 10) + ".."
@@ -150,6 +164,7 @@ function renderRatingCanvas(rating) {
 
   y += Math.ceil(rating.ingredients.length / 3) * 40 + 20;
 
+  // Firma dell'app in fondo alla card
   ctx.fillStyle = "#2d2016";
   ctx.font = '10px "Press Start 2P"';
   ctx.textAlign = "center";
@@ -158,6 +173,7 @@ function renderRatingCanvas(rating) {
   return canvas;
 }
 
+// Attende che i font siano caricati prima di renderizzare, altrimenti "Press Start 2P" potrebbe non essere disponibile
 export async function shareAsImage(rating) {
   await document.fonts.ready;
   const canvas = renderRatingCanvas(rating);
@@ -174,6 +190,7 @@ export async function shareAsImage(rating) {
 export async function copyShareImage(rating) {
   await document.fonts.ready;
   const canvas = renderRatingCanvas(rating);
+  // ClipboardItem richiede un blob con tipo MIME esplicito
   canvas.toBlob(async (blob) => {
     try {
       await navigator.clipboard.write([

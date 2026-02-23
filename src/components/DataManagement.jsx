@@ -1,12 +1,15 @@
 import { useState } from "react";
 
 function DataManagement({ onExport, onImport, importStatus }) {
+  // L'unico stato locale del componente: la modalità scelta prima di selezionare il file
   const [importMode, setImportMode] = useState("merge");
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       onImport(file, importMode);
+      // Resetta il valore dell'input: senza questo, selezionare lo stesso file una seconda
+      // volta non triggherebbe l'evento onChange (il browser considera il valore invariato)
       e.target.value = "";
     }
   };
@@ -39,6 +42,7 @@ function DataManagement({ onExport, onImport, importStatus }) {
               Sostituisci
             </button>
           </div>
+          {/* L'input file è nascosto: il click viene triggerato programmaticamente dal bottone sotto */}
           <input
             type="file"
             accept="application/json"

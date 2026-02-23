@@ -2,11 +2,15 @@ import { MEDIA_TYPES } from "../constants";
 import RatingCard from "./RatingCard";
 
 function AllRatings({ ratings, total, searchTerm, filterType, onFilterChange, sortBy, onSortChange, onEdit, onDelete }) {
+  // hasFilters serve per mostrare un contatore "X risultati su Y" anziché solo "Y voti"
   const hasFilters = searchTerm || filterType;
+
+  // Messaggio diverso a seconda che non ci siano dati o che i filtri non abbiano match
   const emptyMessage =
     total === 0
       ? "Nessun voto salvato."
       : "Nessun voto corrisponde ai filtri.";
+
   return (
     <section className="panel">
       <header className="panel-header">
@@ -21,6 +25,7 @@ function AllRatings({ ratings, total, searchTerm, filterType, onFilterChange, so
       </header>
       <div className="filter-toolbar">
         <div className="pill-grid">
+          {/* filterType === "" significa "nessun filtro" → mostra tutti */}
           <button
             type="button"
             className={`pill ${filterType === "" ? "active" : ""}`}

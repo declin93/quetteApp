@@ -1,6 +1,7 @@
 import RatingCard from "./RatingCard";
 import DataManagement from "./DataManagement";
 
+// Mostra gli ultimi 4 voti (già filtrati da App) + il pannello backup
 function Home({ ratings, totalCount, onNew, onOpenDetail, onExport, onImport, importStatus }) {
   return (
     <section className="panel">
@@ -22,6 +23,7 @@ function Home({ ratings, totalCount, onNew, onOpenDetail, onExport, onImport, im
         </div>
       ) : (
         <div className="cards">
+          {/* compact=true riduce il layout della card; delay=index sfasa l'animazione di ingresso */}
           {ratings.map((rating, index) => (
             <RatingCard
               key={rating.id}
