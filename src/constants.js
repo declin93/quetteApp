@@ -30,6 +30,12 @@ export const MEDIA_TYPES = [
   { value: "libri", label: "libri" },
 ];
 
+export const SUB_RATING_CATEGORIES = [
+  "storia",
+  "grafica/stile",
+  "vibe/clima",
+];
+
 // Stato iniziale del form vuoto, riusato ogni volta che si resetta il draft
 export const emptyDraft = {
   title: "",
@@ -37,6 +43,11 @@ export const emptyDraft = {
   slices: 6,
   flavor: "",
   ingredients: [],
+  subRatings: {
+    storia: 6,
+    "grafica/stile": 6,
+    "vibe/clima": 6,
+  },
 };
 
 // Normalizza ingredienti prima di confrontarli, per evitare duplicati tipo "Funghi" vs "funghi"

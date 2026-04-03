@@ -176,6 +176,21 @@ function App() {
     }));
   };
 
+  const handleSubRatingChange = (category, value) => {
+    setDraft((prev) => {
+      const nextSubRatings = { ...prev.subRatings, [category]: value };
+      const values = Object.values(nextSubRatings);
+      const avg = Math.round(
+        values.reduce((a, b) => a + b, 0) / values.length
+      );
+      return {
+        ...prev,
+        subRatings: nextSubRatings,
+        slices: avg,
+      };
+    });
+  };
+
   const handleAddCustomIngredient = () => {
     const cleaned = customIngredient.trim();
     if (!cleaned) return;
@@ -231,6 +246,7 @@ function App() {
                 slices: draft.slices,
                 flavor,
                 ingredients: draft.ingredients,
+                subRatings: draft.subRatings,
               }
             : item
         );
@@ -255,6 +271,7 @@ function App() {
       slices: draft.slices,
       flavor,
       ingredients: draft.ingredients,
+      subRatings: draft.subRatings,
       createdAt: Date.now(),
     };
 
@@ -314,6 +331,7 @@ function App() {
       slices: rating.slices,
       flavor: rating.flavor,
       ingredients: rating.ingredients,
+      subRatings: rating.subRatings || emptyDraft.subRatings,
     });
     setCustomIngredient("");
     setError("");
@@ -567,6 +585,7 @@ function App() {
             onToggleIngredient={handleToggleIngredient}
             onRemoveIngredient={handleRemoveIngredient}
             onAddCustomIngredient={handleAddCustomIngredient}
+            onSubRatingChange={handleSubRatingChange}
             onToggleSelectedCollection={handleToggleSelectedCollection}
             onSubmit={handleSubmit}
             onCancel={handleCancelEdit}

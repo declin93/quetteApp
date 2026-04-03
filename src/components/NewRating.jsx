@@ -1,4 +1,4 @@
-import { MEDIA_TYPES, STANDARD_INGREDIENTS, normalizeIngredient } from "../constants";
+import { MEDIA_TYPES, STANDARD_INGREDIENTS, SUB_RATING_CATEGORIES, normalizeIngredient } from "../constants";
 import PizzaMeter from "./PizzaMeter";
 
 // Form unificato per creare e modificare un voto — isEditing controlla testo e comportamento
@@ -14,6 +14,7 @@ function NewRating({
   onToggleIngredient,
   onRemoveIngredient,
   onAddCustomIngredient,
+  onSubRatingChange,
   onToggleSelectedCollection,
   onSubmit,
   onCancel,
@@ -78,6 +79,24 @@ function NewRating({
                 onChangeDraft({ ...draft, slices: value })
               }
             />
+          </div>
+        </div>
+
+        <div className="ingredient-section">
+          <h3>Salsa Segreta (Sub-Voti)</h3>
+          <p className="muted">
+            Regola i dettagli e la media delle fette si aggiornerà in tempo reale!
+          </p>
+          <div className="secret-sauce-grid">
+            {SUB_RATING_CATEGORIES.map((cat) => (
+              <div key={cat} className="sub-rating-field">
+                <span>{cat}</span>
+                <PizzaMeter
+                  value={draft.subRatings[cat]}
+                  onSelect={(val) => onSubRatingChange(cat, val)}
+                />
+              </div>
+            ))}
           </div>
         </div>
 

@@ -41,6 +41,24 @@ function RatingCard({
         <span className="badge">{rating.type}</span>
       </div>
       <PizzaMeter value={rating.slices} />
+      {rating.subRatings && (
+        <div className="card-sub-ratings">
+          {Object.entries(rating.subRatings).map(([cat, val]) => (
+            <div key={cat} className="sub-rating-lite">
+              <span>{cat}</span>
+              <div className="dots">
+                {Array.from({ length: 10 }, (_, i) => (
+                  <div
+                    key={i}
+                    className={`dot ${i < val ? "" : "off"}`}
+                    title={`${cat}: ${val}/10`}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="chips">
         {rating.ingredients.map((ingredient) => (
           <span key={ingredient} className="chip static">
